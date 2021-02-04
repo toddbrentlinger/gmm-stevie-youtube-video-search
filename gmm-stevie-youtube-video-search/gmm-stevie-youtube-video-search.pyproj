@@ -1,0 +1,59 @@
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>16c918f1-f9ce-474d-945e-24ca86accab1</ProjectGuid>
+    <ProjectHome>.</ProjectHome>
+    <StartupFile>gmm_stevie_youtube_video_search.py</StartupFile>
+    <SearchPath>
+    </SearchPath>
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <Name>gmm-stevie-youtube-video-search</Name>
+    <RootNamespace>gmm-stevie-youtube-video-search</RootNamespace>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="gmm_stevie_youtube_video_search.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="gmmStevieVideoList - Copy %282%29.json" />
+    <Content Include="gmmStevieVideoList - Copy %283%29.json" />
+    <Content Include="gmmStevieVideoList - Copy %284%29.json" />
+    <Content Include="gmmStevieVideoListSorted - Copy.json" />
+    <Content Include="gmmStevieVideoListSorted.json" />
+    <Content Include="gmmStevieVideoList - Copy.json" />
+    <Content Include="gmmStevieVideoList.json">
+      <SubType>Code</SubType>
+    </Content>
+    <Content Include="gmmVideoList - Copy.json" />
+    <Content Include="gmmVideoList.json">
+      <SubType>Code</SubType>
+    </Content>
+    <Content Include="site\index.html">
+      <SubType>Code</SubType>
+    </Content>
+    <Content Include="site\main.js">
+      <SubType>Code</SubType>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="site\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
+  <!-- Uncomment the CoreCompile target to enable the Build command in
+       Visual Studio and specify your pre- and post-build commands in
+       the BeforeBuild and AfterBuild targets below. -->
+  <!--<Target Name="CoreCompile" />-->
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+</Project>

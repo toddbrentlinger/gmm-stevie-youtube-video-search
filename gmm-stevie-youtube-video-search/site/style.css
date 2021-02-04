@@ -1,0 +1,36 @@
+﻿body {
+}
+
+.video-list {
+    padding: 0;
+}
+
+.video-list > li {
+}
+
+.video-data-container {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.thumbnail-container {
+
+}
+.thumbnail-container img {
+    width: 50%;
+    height: auto;
+}
+
+.total-comments, .total-likes, .total-replies {
+    margin-right: 1em;
+}
+
+@media screen and (max-width: 480px) {
+    .video-data-container {
+        flex-direction: column;
+    }
+    
+    .title {
+        order: -1;
+    }
+}
