@@ -24,16 +24,18 @@
     <Compile Include="gmm_stevie_youtube_video_search.py" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="gmmStevieVideoList - Copy %282%29.json" />
-    <Content Include="gmmStevieVideoList - Copy %283%29.json" />
-    <Content Include="gmmStevieVideoList - Copy %284%29.json" />
-    <Content Include="gmmStevieVideoListSorted - Copy.json" />
+    <Content Include="data\gmmStevieVideoList - Copy %282%29.json" />
+    <Content Include="data\gmmStevieVideoList - Copy %283%29.json" />
+    <Content Include="data\gmmStevieVideoList - Copy %284%29.json" />
+    <Content Include="data\gmmStevieVideoList.json" />
+    <Content Include="data\gmmStevieVideoListSorted - Copy.json" />
+    <Content Include="data\gmmStevieVideoListSorted.json" />
     <Content Include="gmmStevieVideoListSorted.json" />
-    <Content Include="gmmStevieVideoList - Copy.json" />
+    <Content Include="data\gmmStevieVideoList - Copy.json" />
     <Content Include="gmmStevieVideoList.json">
       <SubType>Code</SubType>
     </Content>
-    <Content Include="gmmVideoList - Copy.json" />
+    <Content Include="data\gmmVideoList - Copy.json" />
     <Content Include="gmmVideoList.json">
       <SubType>Code</SubType>
     </Content>
@@ -45,6 +47,7 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="data\" />
     <Folder Include="site\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />

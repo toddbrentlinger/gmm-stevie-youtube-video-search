@@ -21,11 +21,70 @@ def createYouTubeResourceObject():
     # creating Youtube Resource Object 
     return build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION, developerKey = DEVELOPER_KEY)
 
-def doesCommentContainStevie(commentObj):
-    # If comment does NOT contain "stevie" 
-    # AND author does contain "steve"
-    # return false
-    return
+def getCommentThreadReplies(commentThread, youtube_object, isStevieNotInTopLevelComment):
+    # If totalReplyCount is zero, return empty array
+    if (not commentThread['snippet']['totalReplyCount']):
+        return []
+
+    replyObjArr = []
+    # If totalReplyCount is more than replies array, use comments.list() to get replies
+    if (commentThread['snippet']['totalReplyCount'] != len(commentThread['replies']['comments'])):
+        isNextPage = True
+        response = False
+        while (isNextPage):
+            # Get comment threads from video
+            request = youtube_object.comments().list(
+                part="snippet",
+                parentId=commentThread['snippet']['topLevelComment']['id'],
+                maxResults=100,
+                pageToken=response['nextPageToken'] if response and isNextPage else ""
+            )
+            try:
+                response = request.execute()
+            except:
+                print("CommentThread request has error for video ID: " + videoID)
+                response = False
+
+            if response and response['items']:
+                for reply in response['items']:
+                    replyObjArr.append(reply)
+
+            # Check for next page
+            isNextPage = response and 'nextPageToken' in response.keys()
+
+    # Else use replies from commentThread object
+    else:
+        replyObjArr = commentThread['replies']['comments']
+
+    replies = []
+    for reply in replyObjArr:
+        replyText = reply['snippet']['textDisplay']
+        authorName = reply['snippet']['authorDisplayName']
+
+        # If "stevie" NOT in top level comment text
+        # AND "stevie" NOT in reply text
+        # continue
+        if isStevieNotInTopLevelComment and 'stevie' not in replyText.lower():
+            continue
+
+        replies.append({
+            "reply": replyText,
+            "authorName": authorName,
+            "likeCount": reply['snippet']['likeCount']
+        })
+
+    # Function to sort replies to pass into sort()
+    def sortReplies(val):
+        return val['likeCount']
+    # Sort replies by likes in decreasing order
+    replies.sort(key=sortReplies, reverse=True)
+
+    # Keep top 20 replies after sort
+    if (len(replies) > 20):
+        replies = replies[:20]
+
+    # Return replies array
+    return replies
 
 # TODO: 
 # - Add replies that contain "stevie"
@@ -67,9 +126,9 @@ def getStevieVideoData(youtube_object, videoID):
     while (isNextPage):
         # Get comment threads from video
         request = youtube_object.commentThreads().list(
-            part="snippet",
+            part="snippet, replies",
             videoId=videoID,
-            maxResults=3,
+            maxResults=100,
             order="relevance",
             searchTerms="stevie",
             pageToken=response['nextPageToken'] if response and isNextPage else ""
@@ -81,31 +140,51 @@ def getStevieVideoData(youtube_object, videoID):
             response = False
 
         if response and response['items']:
-            totalComments += response['pageInfo']['totalResults']
             for commentThread in response['items']:
-                # Comment
-                comment = commentThread['snippet']['topLevelComment']['snippet']['textDisplay']
-                # Likes
-                likes = commentThread['snippet']['topLevelComment']['snippet']['likeCount']
-                # Replies
-                replies = commentThread['snippet']['totalReplyCount']
+                # Top Level Comment
+                topLevelComment = commentThread['snippet']['topLevelComment']['snippet']['textDisplay']
+                # Author - Top Level Comment
+                authorName = commentThread['snippet']['topLevelComment']['snippet']['authorDisplayName']
+                
+                # Continue if "stevie" NOT in top level comment AND author includes "steve"
+                #if 'stevie' not in topLevelComment.lower() and 'steve' in authorName.lower():
+                #    continue
+                
+                # Likes - Top Level Comment
+                likeCount = commentThread['snippet']['topLevelComment']['snippet']['likeCount']
+                # Replies - Top Level Comment
+                replyCount = commentThread['snippet']['totalReplyCount']
+                replies = getCommentThreadReplies(
+                    commentThread, 
+                    youtube_object, 
+                    'stevie' not in topLevelComment.lower()
+                )
+
+                # Continue if "stevie" NOT in top level comment AND replies is empty
+                if 'stevie' not in topLevelComment.lower() and not replies:
+                    continue
+
                 # Comment Obj
                 comments.append({
-                    "comment": comment,
-                    "likes": likes,
+                    "topLevelComment": topLevelComment,
+                    "authorName": authorName,
+                    "likeCount": likeCount,
+                    "replyCount": replyCount,
                     "replies": replies
                 })
+                # Total Comments
+                totalComments += 1
                 # Total Likes
-                totalLikes += likes
+                totalLikes += likeCount
                 # Total Replies
-                totalReplies += replies
+                totalReplies += replyCount
 
         # Check for next page
         isNextPage = response and 'nextPageToken' in response.keys()
 
     # Function to sort comments to pass into sort()
     def sortComments(comment):
-        return comment['likes']
+        return comment['likeCount']
 
     # Sort comments by likes in decreasing order
     comments.sort(key=sortComments, reverse=True)
@@ -126,124 +205,8 @@ def getStevieVideoData(youtube_object, videoID):
         "comments": comments,
     }
 
-def getStevieVideoDataOld(youtube_object, videoID):
-    # Variables
-    title = ""
-    description = ""
-    thumbnails = []
-    totalComments = 0
-    totalLikes = 0
-    totalReplies = 0
-    comments = []
-
-    # Get title, description, and thumbnails
-    request = youtube_object.videos().list(
-        part="snippet",
-        id=videoID
-    )
-    try:
-        response = request.execute()
-    except:
-        print("Video request has error for video ID: " + videoID)
-        response = False
-
-    if response and response['items']:
-        # Title
-        title = response['items'][0]['snippet']['title']
-        # Description
-        description = response['items'][0]['snippet']['description']
-        # Thumbnails
-        thumbnails = response['items'][0]['snippet']['thumbnails']
-
-    # Get comment threads from video
-    request = youtube_object.commentThreads().list(
-        part="snippet",
-        videoId=videoID,
-        maxResults=100,
-        order="relevance",
-        searchTerms="stevie"
-    )
-    try:
-        response = request.execute()
-    except:
-        print("CommentThread request has error for video ID: " + videoID)
-        response = False
-
-    if response and response['items']:
-        totalComments += response['pageInfo']['totalResults']
-        for commentThread in response['items']:
-            # Comment
-            comment = commentThread['snippet']['topLevelComment']['snippet']['textDisplay']
-            # Likes
-            likes = commentThread['snippet']['topLevelComment']['snippet']['likeCount']
-            # Replies
-            replies = commentThread['snippet']['totalReplyCount']
-            # Comment Obj
-            comments.append({
-                "comment": comment,
-                "likes": likes,
-                "replies": replies
-            })
-            # Total Likes
-            totalLikes += likes
-            # Total Replies
-            totalReplies += replies
-
-        # While 'nextPageToken' key is in response, add commentThreads on next page
-        while 'nextPageToken' in response.keys():
-            request = youtube_object.commentThreads().list(
-                part="snippet",
-                videoId=videoID,
-                maxResults=100,
-                order="relevance",
-                searchTerms="stevie",
-                pageToken=response['nextPageToken']
-            )
-            response = request.execute()
-
-            if response['items']:
-                totalComments += response['pageInfo']['totalResults']
-                for commentThread in response['items']:
-                    # Comment
-                    comment = commentThread['snippet']['topLevelComment']['snippet']['textDisplay']
-                    # Likes
-                    likes = commentThread['snippet']['topLevelComment']['snippet']['likeCount']
-                    # Replies
-                    replies = commentThread['snippet']['totalReplyCount']
-                    # Comment Obj
-                    comments.append({
-                        "comment": comment,
-                        "likes": likes,
-                        "replies": replies
-                    })
-                    # Total Likes
-                    totalLikes += likes
-                    # Total Replies
-                    totalReplies += replies
-
-        # Function to sort comments to pass into sort()
-        def sortComments(comment):
-            return comment['likes']
-
-        # Sort comments by likes in decreasing order
-        comments.sort(key=sortComments, reverse=True)
-
-        # Keep first top 100 comments after sort
-        if (len(comments) > 100):
-            comments = comments[:100]
-
-    # Return video info
-    return {
-        "videoId": videoID,
-        "title": title,
-        "description": description,
-        "thumbnails": thumbnails,
-        "totalComments": totalComments,
-        "totalLikes": totalLikes,
-        "totalReplies": totalReplies,
-        "comments": comments,
-    }
-
+# Returns JSON object of Stevie videos data from list of
+# YouTube video ID's.
 def findStevieVideosFromIDList(videoList):
     # Create YouTube Resource Object
     youtube_object = createYouTubeResourceObject()
@@ -254,7 +217,7 @@ def findStevieVideosFromIDList(videoList):
     for videoID in videoList:
         # Append video info to Stevie video list
         stevieVideoList.append(
-            getStevieVideoData(youtubeyoutube_object, videoID)
+            getStevieVideoData(youtube_object, videoID)
         )
         
         videoCount += 1
@@ -263,92 +226,52 @@ def findStevieVideosFromIDList(videoList):
     
     return stevieVideoList
 
-def findGMMStevieVideos():
+# Takes list of YouTube video ID's from readFile and creates JSON
+# file of Stevie videos data in writeFile.
+def findStevieVideos(readFile, writeFile):
     # Open JSON array from local file and save to python list
-    with open('gmmVideoList.json', 'r') as outfile:
+    with open(readFile, 'r') as outfile:
         videoList = json.load(outfile)
 
     stevieVideoList = findStevieVideosFromIDList(videoList)
 
     print("List length " + str(len(stevieVideoList)))
-    with open('gmmStevieVideoList.json', 'w') as outfile:
+    with open(writeFile, 'w') as outfile:
         json.dump(stevieVideoList, outfile)
 
-def findGMMoreStevieVideos():
+# Takes JSON file of Stevie videos data and creates JSON file of
+# sorted Stevie videos data.
+def sortStevieVideoList(readFile, writeFile):
     # Open JSON array from local file and save to python list
-    with open('gmMoreVideoList.json', 'r') as outfile:
+    with open(readFile, 'r') as outfile:
         videoList = json.load(outfile)
 
-    stevieVideoList = findStevieVideosFromIDList(videoList)
-
-    print("List length " + str(len(stevieVideoList)))
-    with open('gmMoreStevieVideoList.json', 'w') as outfile:
-        json.dump(stevieVideoList, outfile)
-
-def sortStevieVideoList(videoList):
     # TODO:
     # - Remove videos with NO comments
     # - Remove comments that do NOT include "stevie"
-
     def sortComments(val):
         return val['totalComments']
 
     videoList.sort(key=sortComments, reverse=True)
 
-def sortGMMStevieVideoList():
-    # Open JSON array from local file and save to python list
-    with open('gmmStevieVideoList.json', 'r') as outfile:
-        videoList = json.load(outfile)
-
-    sortStevieVideoList(videoList)
-
-    with open('gmmStevieVideoListSorted.json', 'w') as outfile:
+    with open(writeFile, 'w') as outfile:
         json.dump(videoList, outfile)
 
-def sortGMMoreStevieVideoList():
-    # Open JSON array from local file and save to python list
-    with open('gmMoreStevieVideoList.json', 'r') as outfile:
-        videoList = json.load(outfile)
-
-    sortStevieVideoList(videoList)
-
-    with open('gmMoreStevieVideoListSorted.json', 'w') as outfile:
-        json.dump(videoList, outfile)
-
-def getGMMVideos():
+# Creates file of list of video ID's from YouTube channel uploads.
+def getYouTubeChannelVideoIDs(channelID, writeFile):
     # Create Youtube Resource Object 
     youtube_object = createYouTubeResourceObject()
 
-    # Channel ID: UC4PooiX37Pld1T8J5SYT-SQ
-    # Uploads Playlist ID: UU4PooiX37Pld1T8J5SYT-SQ
-
-    channelID = "UC4PooiX37Pld1T8J5SYT-SQ"
     uploadsPlaylistID = getUploadsPlaylistID(channelID, youtube_object)
 
     videoIDList = getPlaylistVideos(uploadsPlaylistID, youtube_object)
 
-    with open('gmmVideoList.json', 'w') as outfile:
+    with open(writeFile, 'w') as outfile:
         json.dump(videoIDList, outfile)
 
     print("Number of videos: " + str(len(videoIDList)))
 
-def getGMMMoreVideos():
-    # Create Youtube Resource Object 
-    youtube_object = createYouTubeResourceObject()
-
-    # Channel ID: UCzpCc5n9hqiVC7HhPwcIKEg
-    # Uploads Playlist ID: UUzpCc5n9hqiVC7HhPwcIKEg
-
-    channelID = "UCzpCc5n9hqiVC7HhPwcIKEg"
-    uploadsPlaylistID = getUploadsPlaylistID(channelID, youtube_object)
-
-    videoIDList = getPlaylistVideos(uploadsPlaylistID, youtube_object)
-
-    with open('gmMoreVideoList.json', 'w') as outfile:
-        json.dump(videoIDList, outfile)
-
-    print("Number of videos: " + str(len(videoIDList)))
-
+# Returns Playlist ID of YouTube channel uploads.
 def getUploadsPlaylistID(channelID, youtube_object):
     request = youtube_object.channels().list(
         part="statistics, contentDetails",
@@ -362,6 +285,7 @@ def getUploadsPlaylistID(channelID, youtube_object):
 
         return response['items'][0]['contentDetails']['relatedPlaylists']['uploads']
 
+# Returns list of YouTube video ID's in playlist.
 def getPlaylistVideos(id, youtube_object):
     request = youtube_object.playlistItems().list(
         part="contentDetails",
@@ -397,23 +321,27 @@ if __name__ == "__main__":
     startTime = time.time()
 
     # Good Mythical Morning
-    #getGMMVideos()
-    #findGMMStevieVideos()
-    #sortGMMStevieVideoList()
+    # Channel ID: UC4PooiX37Pld1T8J5SYT-SQ
+    # Uploads Playlist ID: UU4PooiX37Pld1T8J5SYT-SQ
+    #getYouTubeChannelVideoIDs('UC4PooiX37Pld1T8J5SYT-SQ', 'gmmVideoList.json')
+    findStevieVideos('gmmVideoList.json', 'gmmStevieVideoList.json')
+    sortStevieVideoList('gmmStevieVideoList.json', 'gmmStevieVideoListSorted.json')
 
     # Good Mythical More
-    #getGMMMoreVideos()
-    #findGMMoreStevieVideos()
-    #sortGMMoreStevieVideoList()
+    # Channel ID: UCzpCc5n9hqiVC7HhPwcIKEg
+    # Uploads Playlist ID: UUzpCc5n9hqiVC7HhPwcIKEg
+    #getYouTubeChannelVideoIDs('UCzpCc5n9hqiVC7HhPwcIKEg', 'gmMoreVideoList.json')
+    #findStevieVideos('gmMoreVideoList.json', 'gmMoreStevieVideoList.json')
+    #sortStevieVideoList('gmMoreStevieVideoList.json', 'gmMoreStevieVideoListSorted.json')
 
     # TESTING
-    youtube_object = createYouTubeResourceObject()
-    print(
-        json.dumps(
-            getStevieVideoData(youtube_object, "vehmN2OZ_SQ"),
-            indent=4
-        )
-    )
+    #youtube_object = createYouTubeResourceObject()
+    #print(
+    #    json.dumps(
+    #        getStevieVideoData(youtube_object, "JAXuhhDaXPM"),
+    #        indent=4
+    #    )
+    #)
 
     # Elapsed Time - End
     timeElapsed = time.time() - startTime
